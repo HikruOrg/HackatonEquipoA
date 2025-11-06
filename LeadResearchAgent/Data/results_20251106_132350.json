@@ -1,0 +1,86 @@
+[
+  {
+    "company": "TechFlow Analytics",
+    "round": "Series A",
+    "amount": "$8M",
+    "sector": "FinTech",
+    "HQ": "San Francisco, USA",
+    "snippet": "AI-powered financial analytics platform that helps banks automate risk assessment and fraud detection",
+    "Domain": "techflow.com",
+    "HeadCount": 45,
+    "ICPScore": 0.8250000000000001,
+    "OutreachMessage": "Congrats on your Series A! Love how TechFlow Analytics is transforming fintech.\nHikru could help scale your sales process - would love to explore how we could support your growth."
+  },
+  {
+    "company": "CloudSync Solutions",
+    "round": "Seed",
+    "amount": "$4.5M",
+    "sector": "FinTech",
+    "HQ": "Berlin, Germany",
+    "snippet": "Cloud-based payment orchestration platform enabling seamless integration with multiple payment providers through single API",
+    "Domain": "cloudsync.net",
+    "HeadCount": 78,
+    "ICPScore": 0.8250000000000001,
+    "OutreachMessage": "Exciting news about your $4.5M raise! CloudSync Solutions's approach to platform is impressive.\nOur platform could accelerate your customer acquisition - interested in a quick chat?"
+  },
+  {
+    "company": "AutoInsights",
+    "round": "Series A",
+    "amount": "$6M",
+    "sector": "AI",
+    "HQ": "Munich, Germany",
+    "snippet": "AI-powered analytics platform for automotive manufacturers helping optimize supply chain operations and predict maintenance",
+    "Domain": "autoinsights.ai",
+    "HeadCount": 67,
+    "ICPScore": 0.8250000000000001,
+    "OutreachMessage": "Exciting news about your $6M raise! AutoInsights's approach to analytics is impressive.\nOur platform could accelerate your customer acquisition - interested in a quick chat?"
+  },
+  {
+    "company": "SecureBank",
+    "round": "Series B",
+    "amount": "$25M",
+    "sector": "Cybersecurity",
+    "HQ": "Amsterdam, Netherlands",
+    "snippet": "Cybersecurity platform specializing in protecting financial institutions from advanced persistent threats using machine learning",
+    "Domain": "securebank.io",
+    "HeadCount": 234,
+    "ICPScore": 0.8166666666666668,
+    "OutreachMessage": "Just saw the announcement about SecureBank's funding round. Your work in cybersecurity aligns perfectly with what we see in the market.\nHikru could be a great fit for your expansion plans - worth a conversation?"
+  },
+  {
+    "company": "TradingBot",
+    "round": "Pre-Series A",
+    "amount": "$3.2M",
+    "sector": "FinTech",
+    "HQ": "Copenhagen, Denmark",
+    "snippet": "Algorithmic trading platform for retail investors using AI to democratize sophisticated trading strategies",
+    "Domain": "tradingbot.ai",
+    "HeadCount": 43,
+    "ICPScore": 0.8166666666666668,
+    "OutreachMessage": "Exciting news about your $3.2M raise! TradingBot's approach to platform is impressive.\nOur platform could accelerate your customer acquisition - interested in a quick chat?"
+  },
+  {
+    "company": "InvestorPro",
+    "round": "Seed",
+    "amount": "$7M",
+    "sector": "SaaS",
+    "HQ": "Stockholm, Sweden",
+    "snippet": "Portfolio management SaaS tools for independent financial advisors featuring automated compliance reporting and client communication",
+    "Domain": "investorpro.com",
+    "HeadCount": 98,
+    "ICPScore": 0.8083333333333333,
+    "OutreachMessage": "Amazing progress with your Seed at InvestorPro! Your focus on innovation resonates with our mission.\nHikru could complement your growth strategy beautifully - open to a brief discussion?"
+  },
+  {
+    "company": "DataVision Corp",
+    "round": "Series B",
+    "amount": "$15M",
+    "sector": "Business Intelligence",
+    "HQ": "London, UK",
+    "snippet": "Real-time business intelligence platform using machine learning for predictive analytics in financial services",
+    "Domain": "datavision.io",
+    "HeadCount": 120,
+    "ICPScore": 0.5750000000000001,
+    "OutreachMessage": "Amazing progress with your Series B at DataVision Corp! Your focus on analytics resonates with our mission.\nHikru could complement your growth strategy beautifully - open to a brief discussion?"
+  }
+]

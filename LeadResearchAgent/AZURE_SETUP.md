@@ -42,6 +42,7 @@
    - **Redirect URI**: 
      - Platform: Public client/native (mobile & desktop)
      - URI: `http://localhost`
+     - **Note**: If you see "distinct redirect URIs" error, the URI already exists - that's fine!
 
 #### Step 2: Configure API Permissions
 1. In your app registration, go to "API permissions"
@@ -50,9 +51,21 @@
    ```
    Mail.Read
    Mail.ReadBasic
+   Mail.Send
    User.Read
    ```
 4. Click "Grant admin consent" (if you're an admin)
+
+**For Automation**: See [AUTHENTICATION.md](AUTHENTICATION.md) for device code flow setup
+
+**For Service Automation** (optional):
+1. Go to "Certificates & secrets"
+2. Create a new client secret
+3. Save the secret value (shown only once)
+4. In "API permissions", add **Application permissions**:
+   - Mail.Read
+   - Mail.ReadWrite
+5. Grant admin consent
 
 #### Step 3: Get App Registration Details
 1. Go to "Overview" tab
@@ -61,6 +74,25 @@
    Application (client) ID: [your-client-id]
    Directory (tenant) ID: [your-tenant-id]
    ```
+
+**📚 For detailed authentication setup and automation options, see [AUTHENTICATION.md](AUTHENTICATION.md)**
+
+### 3. Azure AI Foundry / AI Studio (Optional - for enhanced AI capabilities)
+
+#### Step 1: Create AI Foundry Project
+1. Go to [Azure AI Foundry](https://ai.azure.com)
+2. Click "New project" or use existing project
+3. Note the following values:
+   ```
+   Project ID: [your-project-id]
+   Endpoint: https://[your-project].openai.azure.com/
+   API Key: [your-api-key]
+   ```
+
+#### Step 2: Deploy Models (if needed)
+1. In AI Foundry, go to "Deployments"
+2. Deploy required models (GPT-4, etc.)
+3. Note deployment names for configuration
 
 ## 🔑 Environment Variables Setup
 
@@ -74,6 +106,16 @@ $env:AZURE_OPENAI_DEPLOYMENT="gpt-4"
 # Microsoft Graph Configuration
 $env:MICROSOFT_GRAPH_CLIENT_ID="your-client-id"
 $env:MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
+$env:MICROSOFT_GRAPH_CLIENT_SECRET="your-client-secret"  # Optional for app-only auth
+
+# Email Configuration
+$env:DEFAULT_SENDER_EMAIL="your-sender@company.com"
+$env:DEFAULT_RECIPIENT_EMAIL="recipient@company.com"
+
+# Azure AI Foundry Configuration (Optional)
+$env:AZURE_AI_FOUNDRY_ENDPOINT="https://your-project.openai.azure.com/"
+$env:AZURE_AI_FOUNDRY_API_KEY="your-ai-foundry-api-key"
+$env:AZURE_AI_FOUNDRY_PROJECT_ID="your-project-id"
 ```
 
 ### Option 2: User Environment Variables (Persistent)
@@ -86,6 +128,12 @@ $env:MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
    AZURE_OPENAI_DEPLOYMENT = gpt-4
    MICROSOFT_GRAPH_CLIENT_ID = your-client-id
    MICROSOFT_GRAPH_TENANT_ID = your-tenant-id
+   MICROSOFT_GRAPH_CLIENT_SECRET = your-client-secret
+   DEFAULT_SENDER_EMAIL = your-sender@company.com
+   DEFAULT_RECIPIENT_EMAIL = recipient@company.com
+   AZURE_AI_FOUNDRY_ENDPOINT = https://your-project.openai.azure.com/
+   AZURE_AI_FOUNDRY_API_KEY = your-ai-foundry-api-key
+   AZURE_AI_FOUNDRY_PROJECT_ID = your-project-id
    ```
 
 ### Option 3: .env File (Development)
@@ -96,7 +144,63 @@ AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
 AZURE_OPENAI_DEPLOYMENT=gpt-4
 MICROSOFT_GRAPH_CLIENT_ID=your-client-id
 MICROSOFT_GRAPH_TENANT_ID=your-tenant-id
+MICROSOFT_GRAPH_CLIENT_SECRET=your-client-secret
+DEFAULT_SENDER_EMAIL=your-sender@company.com
+DEFAULT_RECIPIENT_EMAIL=recipient@company.com
+AZURE_AI_FOUNDRY_ENDPOINT=https://your-project.openai.azure.com/
+AZURE_AI_FOUNDRY_API_KEY=your-ai-foundry-api-key
+AZURE_AI_FOUNDRY_PROJECT_ID=your-project-id
 ```
+
+### Option 4: appsettings.json Configuration
+Update the `appsettings.json` file in your project:
+```json
+{
+  "Azure": {
+    "KeyVault": {
+      "Url": "https://your-keyvault.vault.azure.net/"
+    },
+    "OpenAI": {
+      "ApiKey": "your-azure-openai-api-key",
+      "Endpoint": "https://your-resource-name.openai.azure.com/",
+      "Deployment": "gpt-4"
+    },
+    "Graph": {
+      "ClientId": "your-client-id",
+      "TenantId": "your-tenant-id",
+      "ClientSecret": "your-client-secret"
+    },
+    "AIFoundry": {
+      "Endpoint": "https://your-project.openai.azure.com/",
+      "ApiKey": "your-ai-foundry-api-key",
+      "ProjectId": "your-project-id"
+    }
+  },
+  "Email": {
+    "DefaultSender": "your-sender@company.com",
+    "DefaultRecipient": "recipient@company.com"
+  }
+}
+```
+
+## 🚀 New Features
+
+### 📧 Email Integration
+- **Send Results**: Automatically send lead research results via email
+- **HTML Reports**: Beautiful HTML-formatted email reports with company details
+- **JSON Attachments**: Detailed data attached for further processing
+- **Configurable Recipients**: Set default recipient email addresses
+
+### 🤖 Azure AI Foundry Integration
+- **Enhanced ICP Scoring**: AI-powered lead scoring improvements
+- **Company Enrichment**: Automatic data enrichment with AI insights
+- **Market Analysis**: Trend analysis and strategic recommendations
+- **Outreach Generation**: AI-powered personalized outreach messages
+
+### 🔧 Configuration Management
+- **Multiple Config Sources**: Environment variables, appsettings.json, Azure Key Vault
+- **Centralized Credentials**: Secure credential management
+- **Fallback Options**: Graceful degradation when services unavailable
 
 ## 🧪 Testing Your Configuration
 
@@ -112,6 +216,12 @@ dotnet run
 
 ### Test Microsoft Graph Connection
 When you run the application and choose option 1 (Outlook emails), a browser window will open asking you to sign in with your Microsoft account.
+
+### Test Email Sending
+Set `DEFAULT_RECIPIENT_EMAIL` to test automatic email sending after processing leads.
+
+### Test AI Foundry Integration
+Configure AI Foundry credentials to enable enhanced AI features like improved scoring and market analysis.
 
 ## 🔒 Security Best Practices
 

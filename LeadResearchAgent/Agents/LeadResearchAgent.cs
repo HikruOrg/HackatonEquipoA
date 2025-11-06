@@ -119,5 +119,10 @@ namespace LeadResearchAgent.Agents
             Console.WriteLine($"✅ Results exported to: {outputPath}");
             return json;
         }
+
+        public ICP LoadICP()
+        {
+            return _icp;
+        }
     }
 }

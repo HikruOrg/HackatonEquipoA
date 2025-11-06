@@ -48,6 +48,7 @@ LeadResearchAgent/
 - .NET 8.0 SDK
 - Visual Studio Code
 - Azure OpenAI access (optional for full functionality)
+- Microsoft 365 account (for email integration)
 
 ### Step 1: Clone the Repository
 ```bash
@@ -60,14 +61,45 @@ cd HackatonEquipoA/LeadResearchAgent
 dotnet restore
 ```
 
-### Step 3: Configure Azure AI (Optional)
-For full AI functionality, set environment variables:
+### Step 3: Configure Azure Services
+
+#### Option A: Quick Start (Interactive)
+Run the setup script to configure credentials interactively:
 ```bash
+# Windows PowerShell (only available on Windows)
+.\setup_credentials.ps1
+
+# Manual configuration (cross-platform)
 # Windows PowerShell
 $env:AZURE_OPENAI_API_KEY="your-api-key"
 $env:AZURE_OPENAI_ENDPOINT="https://your-endpoint.openai.azure.com/"
-$env:AZURE_OPENAI_DEPLOYMENT="gpt-4"
+$env:MICROSOFT_GRAPH_CLIENT_ID="your-client-id"
+$env:MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
+
+# Linux/Mac
+export AZURE_OPENAI_API_KEY="your-api-key"
+export AZURE_OPENAI_ENDPOINT="https://your-endpoint.openai.azure.com/"
+export MICROSOFT_GRAPH_CLIENT_ID="your-client-id"
+export MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
 ```
+
+#### Option B: Automated Setup (Recommended for CI/CD)
+For automation without browser interaction:
+```bash
+# Windows PowerShell
+$env:USE_DEVICE_CODE_AUTH="true"
+$env:MICROSOFT_GRAPH_CLIENT_ID="your-client-id"
+$env:MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
+
+# Linux/Mac
+export USE_DEVICE_CODE_AUTH="true"
+export MICROSOFT_GRAPH_CLIENT_ID="your-client-id"
+export MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
+```
+
+**📚 See [AUTHENTICATION.md](AUTHENTICATION.md) for detailed authentication setup guide**
+
+**📚 See [AZURE_SETUP.md](AZURE_SETUP.md) for Azure resource configuration**
 
 ### Step 4: Customize Your ICP
 Edit `Data/icp.json` to match your target customer profile:
@@ -98,6 +130,16 @@ DataVision Corp,datavision.io,120
 ```bash
 dotnet run
 ```
+
+## 🔐 Authentication Options
+
+The application supports multiple authentication methods:
+
+1. **Interactive Browser** (default) - Simple, opens browser for sign-in
+2. **Device Code** (recommended for automation) - No browser required, use any device
+3. **Client Credentials** (service automation) - Fully automated with client secret
+
+**See [AUTHENTICATION.md](AUTHENTICATION.md) for complete authentication guide**
 
 ## 📊 Input/Output Examples
 
