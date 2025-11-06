@@ -313,10 +313,18 @@ namespace LeadResearchAgent
         {
             Console.WriteLine("🔐 Initializing Microsoft Graph authentication...");
             
+            // Check for automation preference from environment
+            var useDeviceCode = Environment.GetEnvironmentVariable("USE_DEVICE_CODE_AUTH")?.ToLower() == "true";
+            
             if (credentials.IsGraphConfigured && !string.IsNullOrEmpty(credentials.GraphClientSecret))
             {
-                // Use client secret flow for unattended operation
-                Console.WriteLine("Using client credentials flow with secret...");
+                // Use client secret flow for service-to-service scenarios
+                // Note: This requires application permissions and accessing a specific user's mailbox
+                Console.WriteLine("✅ Using automated authentication (client credentials flow)...");
+                Console.WriteLine("💡 This allows the application to run without browser interaction");
+                Console.WriteLine("⚠️  Note: Client credentials flow requires Mail.ReadWrite application permission");
+                Console.WriteLine("⚠️  and accessing a specific user mailbox (e.g., Users('user@domain.com'))");
+                
                 var options = new ClientSecretCredentialOptions
                 {
                     AuthorityHost = AzureAuthorityHosts.AzurePublicCloud,
@@ -328,37 +336,98 @@ namespace LeadResearchAgent
                     credentials.GraphClientSecret,
                     options);
 
-                return new GraphServiceClient(credential);
+                var scopes = new[] { "https://graph.microsoft.com/.default" };
+                return new GraphServiceClient(credential, scopes);
             }
-            else if (credentials.IsGraphConfigured)
+            else if (credentials.IsGraphConfigured && useDeviceCode)
             {
-                // Use interactive browser authentication with your app registration
-                Console.WriteLine("🌐 Opening browser for authentication...");
-                var options = new InteractiveBrowserCredentialOptions
+                // Use device code flow for automation without browser
+                Console.WriteLine("📱 Using device code authentication (no browser required)...");
+                Console.WriteLine("💡 You'll receive a code to enter at https://microsoft.com/devicelogin");
+                Console.WriteLine("💡 This is ideal for automation or remote systems");
+                
+                var options = new DeviceCodeCredentialOptions
                 {
                     TenantId = credentials.GraphTenantId,
                     ClientId = credentials.GraphClientId,
                     AuthorityHost = AzureAuthorityHosts.AzurePublicCloud,
-                    RedirectUri = new Uri("http://localhost"), // Use existing redirect URI
+                    DeviceCodeCallback = (code, cancellation) =>
+                    {
+                        Console.WriteLine($"\n{'=',-60}");
+                        Console.WriteLine("🔐 DEVICE CODE AUTHENTICATION");
+                        Console.WriteLine($"{'=',-60}");
+                        Console.WriteLine($"📱 User Code: {code.UserCode}");
+                        Console.WriteLine($"🌐 Verification URL: {code.VerificationUri}");
+                        Console.WriteLine($"⏱️  Expires: {code.ExpiresOn}");
+                        Console.WriteLine($"{'=',-60}");
+                        Console.WriteLine("\n✅ Please visit the URL above and enter the code to authenticate.");
+                        Console.WriteLine("⏳ Waiting for authentication...\n");
+                        return Task.CompletedTask;
+                    },
                 };
 
-                var credential = new InteractiveBrowserCredential(options);
-                return new GraphServiceClient(credential);
+                var credential = new DeviceCodeCredential(options);
+                var scopes = new[] { "Mail.Read", "Mail.Send", "User.Read" };
+                return new GraphServiceClient(credential, scopes);
+            }
+            else if (credentials.IsGraphConfigured)
+            {
+                // Use interactive browser authentication with your app registration
+                Console.WriteLine("🌐 Using interactive browser authentication...");
+                Console.WriteLine("💡 A browser window will open for sign-in");
+                Console.WriteLine("\n📝 Alternative authentication options:");
+                Console.WriteLine("   • For automation with device code: Set USE_DEVICE_CODE_AUTH=true");
+                Console.WriteLine("   • For service automation: Configure MICROSOFT_GRAPH_CLIENT_SECRET");
+                
+                try
+                {
+                    var options = new InteractiveBrowserCredentialOptions
+                    {
+                        TenantId = credentials.GraphTenantId,
+                        ClientId = credentials.GraphClientId,
+                        AuthorityHost = AzureAuthorityHosts.AzurePublicCloud,
+                        RedirectUri = new Uri("http://localhost"),
+                    };
+
+                    var credential = new InteractiveBrowserCredential(options);
+                    var scopes = new[] { "Mail.Read", "Mail.Send", "User.Read" };
+                    return new GraphServiceClient(credential, scopes);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"\n❌ Interactive authentication failed: {ex.Message}");
+                    Console.WriteLine("\n💡 Troubleshooting tips:");
+                    Console.WriteLine("   1. Ensure redirect URI 'http://localhost' is configured in Azure Portal");
+                    Console.WriteLine("   2. Check that your app has delegated permissions: Mail.Read, Mail.Send, User.Read");
+                    Console.WriteLine("   3. Try device code authentication: Set USE_DEVICE_CODE_AUTH=true");
+                    Console.WriteLine("   4. Verify your Client ID and Tenant ID are correct");
+                    throw;
+                }
             }
             else
             {
                 // Fallback to Microsoft Graph PowerShell public client
-                Console.WriteLine("⚠️  Using fallback authentication (browser will open)...");
+                Console.WriteLine("⚠️  Graph configuration incomplete - using fallback authentication");
+                Console.WriteLine("💡 For better control, configure your own app registration:");
+                Console.WriteLine("   1. Create an app registration in Azure Portal");
+                Console.WriteLine("   2. Add redirect URI: http://localhost (type: Public client/native)");
+                Console.WriteLine("   3. Grant delegated permissions: Mail.Read, Mail.Send, User.Read");
+                Console.WriteLine("   4. Set environment variables:");
+                Console.WriteLine("      • MICROSOFT_GRAPH_CLIENT_ID");
+                Console.WriteLine("      • MICROSOFT_GRAPH_TENANT_ID");
+                Console.WriteLine("🌐 Opening browser for authentication...");
+                
                 var options = new InteractiveBrowserCredentialOptions
                 {
                     TenantId = credentials.GraphTenantId,
-                    ClientId = "14d82eec-204b-4c2f-b7e8-296a70dab67e", // Microsoft Graph PowerShell public client
+                    ClientId = "14d82eec-204b-4c2f-b7e8-296a70dab67e", // Microsoft Graph PowerShell
                     AuthorityHost = AzureAuthorityHosts.AzurePublicCloud,
                     RedirectUri = new Uri("http://localhost"),
                 };
 
                 var credential = new InteractiveBrowserCredential(options);
-                return new GraphServiceClient(credential);
+                var scopes = new[] { "Mail.Read", "Mail.Send", "User.Read" };
+                return new GraphServiceClient(credential, scopes);
             }
         }
     }

@@ -42,6 +42,7 @@
    - **Redirect URI**: 
      - Platform: Public client/native (mobile & desktop)
      - URI: `http://localhost`
+     - **Note**: If you see "distinct redirect URIs" error, the URI already exists - that's fine!
 
 #### Step 2: Configure API Permissions
 1. In your app registration, go to "API permissions"
@@ -55,6 +56,17 @@
    ```
 4. Click "Grant admin consent" (if you're an admin)
 
+**For Automation**: See [AUTHENTICATION.md](AUTHENTICATION.md) for device code flow setup
+
+**For Service Automation** (optional):
+1. Go to "Certificates & secrets"
+2. Create a new client secret
+3. Save the secret value (shown only once)
+4. In "API permissions", add **Application permissions**:
+   - Mail.Read
+   - Mail.ReadWrite
+5. Grant admin consent
+
 #### Step 3: Get App Registration Details
 1. Go to "Overview" tab
 2. Copy the following values:
@@ -62,6 +74,8 @@
    Application (client) ID: [your-client-id]
    Directory (tenant) ID: [your-tenant-id]
    ```
+
+**📚 For detailed authentication setup and automation options, see [AUTHENTICATION.md](AUTHENTICATION.md)**
 
 ### 3. Azure AI Foundry / AI Studio (Optional - for enhanced AI capabilities)
 
