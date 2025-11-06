@@ -1,0 +1,12 @@
+{
+  "industry": ["Technology", "Tech", "Software", "SaaS", "AI", "Machine Learning", "Data Analytics", "FinTech", "EdTech", "HealthTech", "PropTech", "InsurTech", "RetailTech", "AgTech", "CleanTech", "Cybersecurity", "IoT", "Blockchain", "AR/VR", "Robotics"],
+  "stage": ["Pre-Seed", "Seed", "Series A", "Series B", "Early Stage"],
+  "size": {
+    "min_employees": 1,
+    "max_employees": 10000,
+    "funding_min": "1M",
+    "funding_max": "100M"
+  },
+  "geo": ["Global", "USA", "Canada", "Mexico", "UK", "Germany", "France", "Spain", "Netherlands", "Sweden", "Denmark", "Norway", "Finland", "Israel", "Singapore", "Australia", "Brazil", "Argentina", "Chile", "Colombia", "Peru"],
+  "tech_hints": ["technology", "tech", "software", "platform", "API", "SaaS", "cloud", "automation", "analytics", "AI", "machine learning", "data", "digital", "innovation", "app", "mobile", "web", "startup", "disruptive", "scalable", "B2B", "B2C", "enterprise", "solution"]
+}
