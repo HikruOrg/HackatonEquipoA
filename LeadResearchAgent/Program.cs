@@ -84,7 +84,7 @@ namespace LeadResearchAgent
             Console.ReadKey();
         }
 
-        private static async Task InitializeServicesAsync()
+        private static Task InitializeServicesAsync()
         {
             // Build configuration
             var configuration = new ConfigurationBuilder()
@@ -114,6 +114,8 @@ namespace LeadResearchAgent
             _configService = _serviceProvider.GetRequiredService<AzureConfigurationService>();
             
             Console.WriteLine("✅ Services initialized successfully");
+            
+            return Task.CompletedTask;
         }
 
         private static async Task ProcessOutlookEmailsAsync(LeadResearchAgent.Agents.LeadResearchAgent agent, AzureCredentials credentials)
@@ -276,7 +278,7 @@ namespace LeadResearchAgent
             }
         }
 
-        private static async Task<Kernel> InitializeKernelAsync(AzureCredentials credentials)
+        private static Task<Kernel> InitializeKernelAsync(AzureCredentials credentials)
         {
             Console.WriteLine("🔧 Initializing Semantic Kernel...");
 
@@ -286,7 +288,7 @@ namespace LeadResearchAgent
                 Console.WriteLine("For demo purposes, creating a mock kernel...");
                 Console.WriteLine("ℹ️  To use real AI, configure Azure OpenAI credentials");
 
-                return Kernel.CreateBuilder().Build();
+                return Task.FromResult(Kernel.CreateBuilder().Build());
             }
 
             try
@@ -299,13 +301,13 @@ namespace LeadResearchAgent
 
                 var kernel = kernelBuilder.Build();
                 Console.WriteLine("✅ Semantic Kernel initialized with Azure OpenAI");
-                return kernel;
+                return Task.FromResult(kernel);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Failed to initialize Azure OpenAI: {ex.Message}");
                 Console.WriteLine("Creating basic kernel for demo...");
-                return Kernel.CreateBuilder().Build();
+                return Task.FromResult(Kernel.CreateBuilder().Build());
             }
         }
 
