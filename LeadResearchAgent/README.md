@@ -66,25 +66,35 @@ dotnet restore
 #### Option A: Quick Start (Interactive)
 Run the setup script to configure credentials interactively:
 ```bash
-# Windows PowerShell
+# Windows PowerShell (only available on Windows)
 .\setup_credentials.ps1
 
-# Manual configuration
+# Manual configuration (cross-platform)
+# Windows PowerShell
 $env:AZURE_OPENAI_API_KEY="your-api-key"
 $env:AZURE_OPENAI_ENDPOINT="https://your-endpoint.openai.azure.com/"
 $env:MICROSOFT_GRAPH_CLIENT_ID="your-client-id"
 $env:MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
+
+# Linux/Mac
+export AZURE_OPENAI_API_KEY="your-api-key"
+export AZURE_OPENAI_ENDPOINT="https://your-endpoint.openai.azure.com/"
+export MICROSOFT_GRAPH_CLIENT_ID="your-client-id"
+export MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
 ```
 
 #### Option B: Automated Setup (Recommended for CI/CD)
 For automation without browser interaction:
 ```bash
-# Enable device code authentication
+# Windows PowerShell
 $env:USE_DEVICE_CODE_AUTH="true"
-
-# Configure credentials
 $env:MICROSOFT_GRAPH_CLIENT_ID="your-client-id"
 $env:MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
+
+# Linux/Mac
+export USE_DEVICE_CODE_AUTH="true"
+export MICROSOFT_GRAPH_CLIENT_ID="your-client-id"
+export MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
 ```
 
 **📚 See [AUTHENTICATION.md](AUTHENTICATION.md) for detailed authentication setup guide**
