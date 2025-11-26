@@ -1,0 +1,17 @@
+{
+  "profiles": {
+    "LeadResearchAgent": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "AZURE_OPENAI_API_KEY": "your-azure-openai-api-key-here",
+        "AZURE_OPENAI_ENDPOINT": "https://your-resource-name.openai.azure.com/",
+        "AZURE_OPENAI_DEPLOYMENT": "gpt-4",
+        "MICROSOFT_GRAPH_CLIENT_ID": "",
+        "MICROSOFT_GRAPH_TENANT_ID": ""
+      }
+    }
+  }
+}
