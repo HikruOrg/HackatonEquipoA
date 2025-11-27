@@ -8,10 +8,12 @@ namespace LeadResearchAgent.Services
     {
         private readonly GraphServiceClient _graphServiceClient;
         private readonly ILogger<OutlookEmailService>? _logger;
+        private readonly string _userId;
 
-        public OutlookEmailService(GraphServiceClient graphServiceClient, ILogger<OutlookEmailService>? logger = null)
+        public OutlookEmailService(GraphServiceClient graphServiceClient, string userId = "me", ILogger<OutlookEmailService>? logger = null)
         {
             _graphServiceClient = graphServiceClient;
+            _userId = userId;
             _logger = logger;
         }
 
@@ -25,17 +27,14 @@ namespace LeadResearchAgent.Services
                 _logger?.LogInformation("Fetching LinkSV Pulse emails from Outlook...");
 
                 // Search for emails from LinkSV Pulse
-                var messages = await _graphServiceClient.Me.Messages
+                var messages = await _graphServiceClient.Users[_userId].Messages
                     .GetAsync(requestConfiguration =>
                     {
-                        requestConfiguration.QueryParameters.Filter = 
-                            "contains(from/emailAddress/address,'linksv') or " +
-                            "contains(subject,'LinkSV') or " +
-                            "contains(subject,'Pulse') or " +
-                            "contains(from/emailAddress/name,'LinkSV')";
+                        //requestConfiguration.QueryParameters.Filter =
+                        //    "startswith(subject,'LinkSV Pulse')";
                         requestConfiguration.QueryParameters.Top = maxEmails;
-                        requestConfiguration.QueryParameters.Orderby = new[] { "receivedDateTime desc" };
-                        requestConfiguration.QueryParameters.Select = new[] { "subject", "body", "from", "receivedDateTime" };
+                        //requestConfiguration.QueryParameters.Orderby = new[] { "receivedDateTime desc" };
+                        //requestConfiguration.QueryParameters.Select = new[] { "subject", "body", "from", "receivedDateTime" };
                     });
 
                 var emailContents = new List<string>();
@@ -73,7 +72,7 @@ namespace LeadResearchAgent.Services
             {
                 var sinceDate = DateTime.UtcNow.AddDays(-days).ToString("yyyy-MM-ddTHH:mm:ssZ");
                 
-                var messages = await _graphServiceClient.Me.Messages
+                var messages = await _graphServiceClient.Users[_userId].Messages
                     .GetAsync(requestConfiguration =>
                     {
                         requestConfiguration.QueryParameters.Filter = 
@@ -126,7 +125,7 @@ namespace LeadResearchAgent.Services
                     IsRead = true
                 };
 
-                await _graphServiceClient.Me.Messages[messageId]
+                await _graphServiceClient.Users[_userId].Messages[messageId]
                     .PatchAsync(message);
 
                 _logger?.LogInformation($"Marked email {messageId} as read");
@@ -149,7 +148,7 @@ namespace LeadResearchAgent.Services
                     DisplayName = "Processed Newsletters - Hikru"
                 };
 
-                var createdFolder = await _graphServiceClient.Me.MailFolders
+                var createdFolder = await _graphServiceClient.Users[_userId].MailFolders
                     .PostAsync(folder);
 
                 return createdFolder?.Id ?? "";

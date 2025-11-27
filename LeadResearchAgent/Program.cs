@@ -3,6 +3,7 @@ using Microsoft.Graph;
 using Azure.Identity;
 using LeadResearchAgent.Agents;
 using LeadResearchAgent.Services;
+using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace LeadResearchAgent
 {
@@ -18,6 +19,19 @@ namespace LeadResearchAgent
             {
                 // Initialize Semantic Kernel with Azure OpenAI
                 var kernel = await InitializeKernelAsync();
+                
+                // Test kernel connection
+                Console.WriteLine("\n🧪 Testing Kernel connection...");
+                var isConnected = await TestKernelConnectionAsync(kernel);
+                
+                if (!isConnected)
+                {
+                    Console.WriteLine("⚠️  Kernel is in demo mode. Some AI features may not work.");
+                }
+                else
+                {
+                    Console.WriteLine("✅ Kernel connection verified!");
+                }
                 
                 // Paths to configuration files
                 var icpPath = Path.Combine("Data", "icp.json");
@@ -72,7 +86,10 @@ namespace LeadResearchAgent
                 
                 // Initialize Graph client
                 var graphClient = await InitializeGraphClientAsync();
-                var outlookService = new OutlookEmailService(graphClient);
+                
+                // Get the user ID - use "me" for delegated auth, or get from config for app-only
+                var userId = Environment.GetEnvironmentVariable("MICROSOFT_GRAPH_USER_ID") ?? "me";
+                var outlookService = new OutlookEmailService(graphClient, userId);
 
                 // Get recent LinkSV Pulse emails
                 Console.WriteLine("🔍 Searching for LinkSV Pulse newsletters...");
@@ -195,39 +212,81 @@ namespace LeadResearchAgent
         {
             var clientId = Environment.GetEnvironmentVariable("MICROSOFT_GRAPH_CLIENT_ID");
             var tenantId = Environment.GetEnvironmentVariable("MICROSOFT_GRAPH_TENANT_ID");
+            var clientSecret = Environment.GetEnvironmentVariable("MICROSOFT_GRAPH_CLIENT_SECRET");
 
-            if (string.IsNullOrEmpty(clientId))
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientSecret))
             {
-                Console.WriteLine("⚠️  Using interactive authentication (browser will open)...");
+                Console.WriteLine("⚠️  Client credentials not configured. Using interactive authentication...");
                 
-                // Interactive authentication for demo
                 var options = new InteractiveBrowserCredentialOptions
                 {
                     TenantId = tenantId,
-                    ClientId = "14d82eec-204b-4c2f-b7e8-296a70dab67e", // Microsoft Graph PowerShell public client
+                    ClientId = "14d82eec-204b-4c2f-b7e8-296a70dab67e",
                     AuthorityHost = AzureAuthorityHosts.AzurePublicCloud,
                     RedirectUri = new Uri("http://localhost"),
                 };
 
                 var credential = new InteractiveBrowserCredential(options);
-                var graphClient = new GraphServiceClient(credential);
-                
-                return graphClient;
+                return new GraphServiceClient(credential);
             }
             else
             {
-                // App registration authentication
-                var options = new DeviceCodeCredentialOptions
-                {
-                    AuthorityHost = AzureAuthorityHosts.AzurePublicCloud,
-                    ClientId = clientId,
-                    TenantId = tenantId,
-                };
-
-                var credential = new DeviceCodeCredential(options);
-                var graphClient = new GraphServiceClient(credential);
+                Console.WriteLine("🔐 Using app registration (client credentials) - Production mode...");
                 
-                return graphClient;
+                // Use ClientSecretCredential for production/unattended authentication
+                var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+                return new GraphServiceClient(credential);
+            }
+        }
+
+        private static async Task<bool> TestKernelConnectionAsync(Kernel kernel)
+        {
+            try
+            {
+                // Check if kernel has any chat completion services
+                var chatCompletionServices = kernel.GetAllServices<IChatCompletionService>();
+                
+                if (!chatCompletionServices.Any())
+                {
+                    Console.WriteLine("⚠️  No chat completion services found in kernel.");
+                    return false;
+                }
+
+                var chatService = chatCompletionServices.First();
+                Console.WriteLine($"📡 Found chat service: {chatService.GetType().Name}");
+
+                // Try a simple test prompt
+                Console.WriteLine("🔄 Sending test message to Azure OpenAI...");
+                var userMessage = "Respond with exactly 'Kernel connection successful' and nothing else.";
+                var response = await chatService.GetChatMessageContentAsync(
+                    userMessage,
+                    new PromptExecutionSettings { ExtensionData = new Dictionary<string, object> { ["max_tokens"] = 50 } }
+                );
+
+                if (response != null && !string.IsNullOrEmpty(response.Content))
+                {
+                    Console.WriteLine($"✅ Response received: {response.Content}");
+                    return true;
+                }
+
+                return false;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"❌ Network/API error: {ex.Message}");
+                Console.WriteLine("   Check your AZURE_OPENAI_ENDPOINT and network connectivity.");
+                return false;
+            }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"❌ Configuration error: {ex.Message}");
+                Console.WriteLine("   Check your AZURE_OPENAI_API_KEY and AZURE_OPENAI_DEPLOYMENT.");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Kernel test failed: {ex.GetType().Name}: {ex.Message}");
+                return false;
             }
         }
     }
