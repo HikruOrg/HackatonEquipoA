@@ -1,0 +1,20 @@
+{
+  "profiles": {
+    "LeadResearchAgent": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "AZURE_FOUNDRY_API_KEY": "",
+        "AZURE_FOUNDRY_ENDPOINT": "",
+        "AZURE_FOUNDRY_AGENT_ID": "",
+        "AZURE_OPENAI_DEPLOYMENT": "gpt-4",
+        "MICROSOFT_GRAPH_CLIENT_ID": "",
+        "MICROSOFT_GRAPH_TENANT_ID": "",
+        "MICROSOFT_GRAPH_CLIENT_SECRET": "",
+        "MICROSOFT_GRAPH_USER_ID": "test@hikrutech.com"
+      }
+    }
+  }
+}
