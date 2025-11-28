@@ -95,10 +95,9 @@ namespace LeadResearchAgent.Agents
 
             // Extract text content from message
             var outputText = ExtractTextFromMessage(assistantMessage);
-
             var parsedOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var parsed = JsonSerializer.Deserialize<List<FoundryCompanyResult>>(outputText, parsedOptions)
-                         ?? new List<FoundryCompanyResult>();
+                            ?? new List<FoundryCompanyResult>();
 
             return parsed;
         }

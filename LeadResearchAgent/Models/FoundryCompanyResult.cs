@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json.Serialization;
-using LeadResearchAgent.Agents;
+﻿using System.Text.Json.Serialization;
 
 namespace LeadResearchAgent.Models
 {
@@ -14,8 +10,8 @@ namespace LeadResearchAgent.Models
         [JsonPropertyName("razon_de_match")]
         public string? RazonDeMatch { get; set; }
 
-        [JsonPropertyName("Total Capital")]
-        public string? TotalCapital { get; set; }
+        [JsonPropertyName("total_capital")]
+        public double? TotalCapital { get; set; }
 
         [JsonPropertyName("nivel_interes")]
         public string? NivelInteres { get; set; }

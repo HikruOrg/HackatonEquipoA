@@ -15,7 +15,7 @@ namespace LeadResearchAgent
             try
             {
                 // Use Azure Foundry agent for analysis
-                var foundryAgent = new AzureFoundryLeadAgent();
+                    var foundryAgent = new AzureFoundryLeadAgent();
 
                 var emails = await LoadOutlookEmailsAsync();
 
@@ -112,15 +112,30 @@ namespace LeadResearchAgent
             // Initialize Graph client
             var graphClient = await InitializeGraphClientAsync();
 
-            // Construye el HTML del correo
+            // Separate accepted and rejected results
+            var aceptadas = results
+                .Where(r => r.NivelInteres != null &&
+                            (r.NivelInteres.Equals("alto", StringComparison.OrdinalIgnoreCase) ||
+                             r.NivelInteres.Equals("medio", StringComparison.OrdinalIgnoreCase) ||
+                             r.NivelInteres.Equals("bajo", StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            var descartadas = results
+                .Where(r => r.NivelInteres != null &&
+                            r.NivelInteres.Equals("descartar", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
             var htmlBuilder = new System.Text.StringBuilder();
             htmlBuilder.AppendLine("<h2>Resultados Lead Research Agent</h2>");
+
+            // Accepted section
+            htmlBuilder.AppendLine("<h3>Aceptadas</h3>");
             htmlBuilder.AppendLine("<ul>");
-            foreach (var r in results)
+            foreach (var r in aceptadas)
             {
                 htmlBuilder.AppendLine("<li>");
                 htmlBuilder.AppendLine($"<strong>{r.Empresa?.Nombre}</strong> ({r.Empresa?.Sector}, {r.Empresa?.Pais})<br>");
-                htmlBuilder.AppendLine($"<b>Capital:</b> {r.TotalCapital}<br>");
+                htmlBuilder.AppendLine($"<b>Capital:</b> {r.TotalCapital}M <br>");
                 htmlBuilder.AppendLine($"<b>Interés:</b> {r.NivelInteres}<br>");
                 htmlBuilder.AppendLine($"<b>Resumen:</b> {r.Resumen}<br>");
                 htmlBuilder.AppendLine($"<b>Razón de match:</b> {r.RazonDeMatch}<br>");
@@ -128,6 +143,25 @@ namespace LeadResearchAgent
                 htmlBuilder.AppendLine("</br>");
             }
             htmlBuilder.AppendLine("</ul>");
+
+            if (descartadas.Any())
+            {
+                // Rejected section
+                htmlBuilder.AppendLine("<h3>Descartadas</h3>");
+                htmlBuilder.AppendLine("<ul>");
+                foreach (var r in descartadas)
+                {
+                    htmlBuilder.AppendLine("<li>");
+                    htmlBuilder.AppendLine($"<strong>{r.Empresa?.Nombre}</strong> ({r.Empresa?.Sector}, {r.Empresa?.Pais})<br>");
+                    htmlBuilder.AppendLine($"<b>Capital:</b> {r.TotalCapital}M <br>");
+                    htmlBuilder.AppendLine($"<b>Interés:</b> {r.NivelInteres}<br>");
+                    htmlBuilder.AppendLine($"<b>Resumen:</b> {r.Resumen}<br>");
+                    htmlBuilder.AppendLine($"<b>Razón de descarte:</b> {r.RazonDeMatch}<br>");
+                    htmlBuilder.AppendLine("</li>");
+                    htmlBuilder.AppendLine("</br>");
+                }
+                htmlBuilder.AppendLine("</ul>");
+            }
 
             var message = new Microsoft.Graph.Models.Message
             {
