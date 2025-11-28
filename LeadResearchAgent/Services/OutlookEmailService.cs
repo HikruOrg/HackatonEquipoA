@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
-using Microsoft.Extensions.Logging;
 
 namespace LeadResearchAgent.Services
 {
@@ -18,23 +18,22 @@ namespace LeadResearchAgent.Services
         }
 
         /// <summary>
-        /// Retrieves LinkSV Pulse newsletters from Outlook inbox
+        /// Retrieves unread LinkSV Pulse newsletters from Outlook inbox
         /// </summary>
         public async Task<List<string>> GetLinkSVPulseEmailsAsync(int maxEmails = 10)
         {
             try
             {
-                _logger?.LogInformation("Fetching LinkSV Pulse emails from Outlook...");
+                _logger?.LogInformation("Fetching unread LinkSV Pulse emails from Outlook...");
 
-                // Search for emails from LinkSV Pulse
+                // Search for unread emails from LinkSV Pulse
                 var messages = await _graphServiceClient.Users[_userId].Messages
                     .GetAsync(requestConfiguration =>
                     {
-                        //requestConfiguration.QueryParameters.Filter =
-                        //    "startswith(subject,'LinkSV Pulse')";
+                        //requestConfiguration.QueryParameters.Filter = "isRead eq false";
                         requestConfiguration.QueryParameters.Top = maxEmails;
                         //requestConfiguration.QueryParameters.Orderby = new[] { "receivedDateTime desc" };
-                        //requestConfiguration.QueryParameters.Select = new[] { "subject", "body", "from", "receivedDateTime" };
+                        //requestConfiguration.QueryParameters.Select = new[] { "subject", "body", "from", "receivedDateTime", "isRead" };
                     });
 
                 var emailContents = new List<string>();
@@ -48,68 +47,18 @@ namespace LeadResearchAgent.Services
                             var emailContent = ExtractTextFromHtml(message.Body.Content);
                             emailContents.Add(emailContent);
                             
-                            _logger?.LogInformation($"Retrieved email: {message.Subject} from {message.From?.EmailAddress?.Address}");
+                            _logger?.LogInformation($"Retrieved unread email: {message.Subject} from {message.From?.EmailAddress?.Address}");
                         }
                     }
                 }
 
-                _logger?.LogInformation($"Successfully retrieved {emailContents.Count} LinkSV Pulse emails");
+                _logger?.LogInformation($"Successfully retrieved {emailContents.Count} unread LinkSV Pulse emails");
                 return emailContents;
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Failed to retrieve emails from Outlook");
                 throw new InvalidOperationException($"Failed to retrieve emails: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// Searches for unread newsletter emails in the last 7 days
-        /// </summary>
-        public async Task<List<NewsletterEmail>> GetRecentNewslettersAsync(int days = 7)
-        {
-            try
-            {
-                var sinceDate = DateTime.UtcNow.AddDays(-days).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                
-                var messages = await _graphServiceClient.Users[_userId].Messages
-                    .GetAsync(requestConfiguration =>
-                    {
-                        requestConfiguration.QueryParameters.Filter = 
-                            $"receivedDateTime ge {sinceDate} and " +
-                            "(contains(subject,'newsletter') or " +
-                            "contains(subject,'funding') or " +
-                            "contains(subject,'startups') or " +
-                            "contains(subject,'venture') or " +
-                            "contains(subject,'investment') or " +
-                            "contains(from/emailAddress/address,'linksv'))";
-                        requestConfiguration.QueryParameters.Top = 50;
-                        requestConfiguration.QueryParameters.Orderby = new[] { "receivedDateTime desc" };
-                    });
-
-                var newsletters = new List<NewsletterEmail>();
-
-                if (messages?.Value != null)
-                {
-                    foreach (var message in messages.Value)
-                    {
-                        newsletters.Add(new NewsletterEmail
-                        {
-                            Subject = message.Subject ?? "",
-                            Content = ExtractTextFromHtml(message.Body?.Content ?? ""),
-                            Sender = message.From?.EmailAddress?.Address ?? "",
-                            ReceivedDate = message.ReceivedDateTime?.DateTime ?? DateTime.Now,
-                            MessageId = message.Id ?? ""
-                        });
-                    }
-                }
-
-                return newsletters;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Failed to retrieve recent newsletters");
-                throw;
             }
         }
 
@@ -136,29 +85,6 @@ namespace LeadResearchAgent.Services
             }
         }
 
-        /// <summary>
-        /// Creates a folder for processed newsletters (optional organization)
-        /// </summary>
-        public async Task<string> CreateProcessedFolderAsync()
-        {
-            try
-            {
-                var folder = new MailFolder
-                {
-                    DisplayName = "Processed Newsletters - Hikru"
-                };
-
-                var createdFolder = await _graphServiceClient.Users[_userId].MailFolders
-                    .PostAsync(folder);
-
-                return createdFolder?.Id ?? "";
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, "Failed to create processed folder");
-                return "";
-            }
-        }
 
         private string ExtractTextFromHtml(string htmlContent)
         {
@@ -192,14 +118,5 @@ namespace LeadResearchAgent.Services
             
             return text.Trim();
         }
-    }
-
-    public class NewsletterEmail
-    {
-        public string Subject { get; set; } = "";
-        public string Content { get; set; } = "";
-        public string Sender { get; set; } = "";
-        public DateTime ReceivedDate { get; set; }
-        public string MessageId { get; set; } = "";
     }
 }

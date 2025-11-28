@@ -1,7 +1,7 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Azure.AI.Agents.Persistent;
 using Azure.Identity;
+using LeadResearchAgent.Models;
 
 namespace LeadResearchAgent.Agents
 {
@@ -47,7 +47,6 @@ namespace LeadResearchAgent.Agents
             // Use parameterless constructor and object initializer
             var threadOptions = new PersistentAgentThreadCreationOptions
             {
-                // Messages property is IList<ThreadMessageOptions> — use initializer directly
             };
             threadOptions.Messages.Add(new ThreadMessageOptions
             ("user", newsletterText));
@@ -74,9 +73,6 @@ namespace LeadResearchAgent.Agents
             {
                 throw new InvalidOperationException($"Agent run failed with status: {run.Status}");
             }
-
-            // Get messages from the thread
-            //var messagesResponse = await _persistentClient.GetMessagesAsync(run.ThreadId, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             var messagesPageable = _persistentClient.Messages.GetMessagesAsync(run.ThreadId);
 
@@ -122,71 +118,5 @@ namespace LeadResearchAgent.Agents
 
             return string.Empty;
         }
-    }
-
-    // Models to match the JSON structure expected from the Foundry agent.
-    // JsonPropertyName attributes map exact JSON keys (including spaces) to C# properties.
-
-    public class FoundryCompanyResult
-    {
-        [JsonPropertyName("empresa")]
-        public Empresa? Empresa { get; set; }
-
-        [JsonPropertyName("razon_de_match")]
-        public string? RazonDeMatch { get; set; }
-
-        [JsonPropertyName("Total Capital")]
-        public string? TotalCapital { get; set; }
-
-        [JsonPropertyName("nivel_interes")]
-        public string? NivelInteres { get; set; }
-
-        [JsonPropertyName("campos_relevantes")]
-        public CamposRelevantes? CamposRelevantes { get; set; }
-
-        [JsonPropertyName("resumen")]
-        public string? Resumen { get; set; }
-
-        [JsonPropertyName("meta")]
-        public Meta? Meta { get; set; }
-
-        [JsonPropertyName("id_email")]
-        public string? IdEmail { get; set; }
-    }
-
-    public class Empresa
-    {
-        [JsonPropertyName("nombre")]
-        public string? Nombre { get; set; }
-
-        [JsonPropertyName("pais")]
-        public string? Pais { get; set; }
-
-        [JsonPropertyName("sector")]
-        public string? Sector { get; set; }
-
-        [JsonPropertyName("dominio")]
-        public string? Dominio { get; set; }
-    }
-
-    public class CamposRelevantes
-    {
-        [JsonPropertyName("contacto")]
-        public string? Contacto { get; set; }
-
-        [JsonPropertyName("email")]
-        public string? Email { get; set; }
-
-        [JsonPropertyName("telefono")]
-        public string? Telefono { get; set; }
-    }
-
-    public class Meta
-    {
-        [JsonPropertyName("fuente_seccion")]
-        public string? FuenteSeccion { get; set; }
-
-        [JsonPropertyName("linea_original")]
-        public string? LineaOriginal { get; set; }
-    }
+    }    
 }

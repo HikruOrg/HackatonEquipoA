@@ -1,5 +1,6 @@
 ﻿using Azure.Identity;
 using LeadResearchAgent.Agents;
+using LeadResearchAgent.Models;
 using LeadResearchAgent.Services;
 using Microsoft.Graph;
 
@@ -33,11 +34,8 @@ namespace LeadResearchAgent
 
             var results = await foundryAgent.ProcessNewsletterAsync(email);
 
-            // Save raw JSON to file
-            var outputPath = Path.Combine("Data", $"foundry_results_{DateTime.Now:yyyyMMdd_HHmmss}.json");
-            var json = System.Text.Json.JsonSerializer.Serialize(results, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(outputPath, json);
-            Console.WriteLine($"Results saved to: {outputPath} (items: {results.Count})");
+            await SendResultsByEmailAsync("daniel.ramirez@hikrutech.com", results);
+
         }
 
         private static async Task<List<string>> LoadOutlookEmailsAsync()
@@ -107,6 +105,65 @@ namespace LeadResearchAgent
                 var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
                 return new GraphServiceClient(credential);
             }
+        }
+
+        private static async Task SendResultsByEmailAsync(string recipientEmail, List<FoundryCompanyResult> results)
+        {
+            // Initialize Graph client
+            var graphClient = await InitializeGraphClientAsync();
+
+            // Construye el HTML del correo
+            var htmlBuilder = new System.Text.StringBuilder();
+            htmlBuilder.AppendLine("<h2>Resultados Lead Research Agent</h2>");
+            htmlBuilder.AppendLine("<ul>");
+            foreach (var r in results)
+            {
+                htmlBuilder.AppendLine("<li>");
+                htmlBuilder.AppendLine($"<strong>{r.Empresa?.Nombre}</strong> ({r.Empresa?.Sector}, {r.Empresa?.Pais})<br>");
+                htmlBuilder.AppendLine($"<b>Capital:</b> {r.TotalCapital}<br>");
+                htmlBuilder.AppendLine($"<b>Interés:</b> {r.NivelInteres}<br>");
+                htmlBuilder.AppendLine($"<b>Resumen:</b> {r.Resumen}<br>");
+                htmlBuilder.AppendLine($"<b>Razón de match:</b> {r.RazonDeMatch}<br>");
+                htmlBuilder.AppendLine("</li>");
+                htmlBuilder.AppendLine("</br>");
+            }
+            htmlBuilder.AppendLine("</ul>");
+
+            var message = new Microsoft.Graph.Models.Message
+            {
+                Subject = "Resultados Lead Research Agent",
+                Body = new Microsoft.Graph.Models.ItemBody
+                {
+                    ContentType = Microsoft.Graph.Models.BodyType.Html,
+                    Content = htmlBuilder.ToString()
+                },
+                ToRecipients = new List<Microsoft.Graph.Models.Recipient>
+                {
+                    new Microsoft.Graph.Models.Recipient
+                    {
+                        EmailAddress = new Microsoft.Graph.Models.EmailAddress
+                        {
+                            Address = recipientEmail
+                        }
+                    }
+                }
+            };
+            try
+            {
+                var userId = Environment.GetEnvironmentVariable("MICROSOFT_GRAPH_USER_ID") ?? "me";
+                await graphClient.Users[userId].SendMail.PostAsync(new Microsoft.Graph.Users.Item.SendMail.SendMailPostRequestBody
+                {
+                    Message = message,
+                    SaveToSentItems = true
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending email: {ex.Message}");
+                throw;
+            }
+
+
         }
     }
 }
