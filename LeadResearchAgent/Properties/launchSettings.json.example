@@ -13,7 +13,8 @@
         "MICROSOFT_GRAPH_CLIENT_ID": "",
         "MICROSOFT_GRAPH_TENANT_ID": "",
         "MICROSOFT_GRAPH_CLIENT_SECRET": "",
-        "MICROSOFT_GRAPH_USER_ID": "test@hikrutech.com"
+        "MICROSOFT_GRAPH_USER_ID": "test@hikrutech.com",
+        "WORKER_EXECUTION_INTERVAL": "60"
       }
     }
   }
