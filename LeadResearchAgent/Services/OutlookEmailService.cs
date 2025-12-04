@@ -45,7 +45,8 @@ namespace LeadResearchAgent.Services
                     {
                         if (message.Body?.Content != null && message.Id != null)
                         {
-                            var emailContent = ExtractTextFromHtml(message.Body.Content);
+                            //var emailContent = ExtractTextFromHtml(message.Body.Content);
+                            var emailContent = message.Body.Content;
                             emailMessages.Add(new EmailMessage
                             {
                                 Id = message.Id,
@@ -162,7 +163,15 @@ namespace LeadResearchAgent.Services
             foreach (var r in aceptadas)
             {
                 htmlBuilder.AppendLine("<li>");
-                htmlBuilder.AppendLine($"<strong>{r.Empresa?.Nombre}</strong> ({r.Empresa?.Sector}, {r.Empresa?.Pais})<br>");
+                var companyName = r.Empresa?.Nombre ?? "N/A";
+                if (!string.IsNullOrEmpty(r.EmpresaUrl))
+                {
+                    htmlBuilder.AppendLine($"<strong><a href=\"{r.EmpresaUrl}\" target=\"_blank\">{companyName}</a></strong> ({r.Empresa?.Sector}, {r.Empresa?.Pais})<br>");
+                }
+                else
+                {
+                    htmlBuilder.AppendLine($"<strong>{companyName}</strong> ({r.Empresa?.Sector}, {r.Empresa?.Pais})<br>");
+                }
                 htmlBuilder.AppendLine($"<b>Capital:</b> {r.TotalCapital}M <br>");
                 htmlBuilder.AppendLine($"<b>Interés:</b> {r.NivelInteres}<br>");
                 htmlBuilder.AppendLine($"<b>Resumen:</b> {r.Resumen}<br>");

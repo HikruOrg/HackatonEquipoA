@@ -7,6 +7,9 @@ namespace LeadResearchAgent.Models
         [JsonPropertyName("empresa")]
         public Empresa? Empresa { get; set; }
 
+        [JsonPropertyName("empresa_url")]
+        public string? EmpresaUrl { get; set; }
+
         [JsonPropertyName("razon_de_match")]
         public string? RazonDeMatch { get; set; }
 
