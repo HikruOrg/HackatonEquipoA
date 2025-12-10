@@ -56,8 +56,6 @@ namespace LeadResearchAgent.Agents
                 ThreadOptions = threadOptions
             };
 
-
-
             var runResponse = await _persistentClient.CreateThreadAndRunAsync(_assistantId, options, cancellationToken).ConfigureAwait(false);
             var run = runResponse.Value;
 

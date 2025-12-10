@@ -15,6 +15,9 @@ namespace LeadResearchAgent
         private readonly IHostApplicationLifetime _hostApplicationLifetime;
         private readonly ILoggerFactory _loggerFactory;
         private readonly TimeSpan? _executionInterval;
+        private readonly TimeSpan? _executionTime;
+        private readonly TimeZoneInfo _timeZone;
+        private DateTime? _lastExecutionDate;
 
         public Worker(
             ILogger<Worker> logger, 
@@ -28,40 +31,120 @@ namespace LeadResearchAgent
             _graphClient = graphClient;
             _hostApplicationLifetime = hostApplicationLifetime;
             _loggerFactory = loggerFactory;
+            _timeZone = ParseTimeZone();
+            _executionTime = ParseExecutionTime();
             _executionInterval = ParseExecutionInterval();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // If no interval configured, run once and stop (triggered WebJob mode)
+            // If no interval configured stop
             if (!_executionInterval.HasValue)
             {
-                _logger.LogInformation("Running in triggered mode (no interval configured)");
-                await RunProcessingAsync(stoppingToken);
                 _hostApplicationLifetime.StopApplication();
                 return;
             }
 
             // Interval mode - run continuously at specified intervals
             _logger.LogInformation("Running in interval mode. Execution interval: {Interval}", _executionInterval.Value);
+            
+            if (_executionTime.HasValue)
+            {
+                _logger.LogInformation("Execution will only occur at configured time: {Time} ({TimeZone})", 
+                    _executionTime.Value.ToString(@"hh\:mm"), 
+                    _timeZone.DisplayName);
+            }
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                await RunProcessingAsync(stoppingToken);
+                if (ShouldExecuteNow())
+                {
+                    await RunProcessingAsync(stoppingToken);
+                    _lastExecutionDate = GetCurrentDate();
+                }
+                else
+                {
+                    var currentTime = GetCurrentTime();
+                    _logger.LogInformation("Current time {CurrentTime} ({TimeZone}) - waiting for execution time {ExecutionTime}", 
+                        currentTime.ToString(@"hh\:mm"), 
+                        _timeZone.DisplayName,
+                        _executionTime?.ToString(@"hh\:mm") ?? "any");
+                }
 
                 if (!stoppingToken.IsCancellationRequested)
                 {
-                    _logger.LogInformation("Next execution in {Interval}. Waiting...", _executionInterval.Value);
+                    _logger.LogInformation("Next check in {Interval}. Waiting...", _executionInterval.Value);
                     await Task.Delay(_executionInterval.Value, stoppingToken);
                 }
             }
+        }
+
+        private bool ShouldExecuteNow()
+        {
+            // If no execution time is configured, never execute
+            if (!_executionTime.HasValue)
+            {
+                return false;
+            }
+
+            var currentDateTime = GetCurrentDate();
+            var currentTime = GetCurrentTime();
+
+            // Extract the target hour from execution time
+            var targetHour = _executionTime.Value.Hours;
+            var currentHour = currentTime.Hours;
+
+            // Check if current hour matches target hour
+            if (currentHour != targetHour)
+            {
+                return false;
+            }
+
+            // We're in the correct hour - now check if we already executed in this hour
+            if (_lastExecutionDate.HasValue)
+            {
+                var lastExecutionHour = _lastExecutionDate.Value.Hour;
+                var lastExecutionDay = _lastExecutionDate.Value.Date;
+                var currentDay = currentDateTime.Date;
+
+                // If we already executed in this hour today, skip
+                if (lastExecutionDay == currentDay && lastExecutionHour == currentHour)
+                {
+                    return false;
+                }
+            }
+
+            // Check if current time is within tolerance of execution time
+            var timeDifference = currentTime - _executionTime.Value;
+            var tolerance = _executionInterval ?? TimeSpan.FromMinutes(1);
+
+            if (Math.Abs(timeDifference.TotalMinutes) <= tolerance.TotalMinutes)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private DateTime GetCurrentDate()
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _timeZone);
+        }
+
+        private TimeSpan GetCurrentTime()
+        {
+            var currentDateTime = GetCurrentDate();
+            return currentDateTime.TimeOfDay;
         }
 
         private async Task RunProcessingAsync(CancellationToken stoppingToken)
         {
             try
             {
-                _logger.LogInformation("Lead Research Agent - starting execution at {Time}", DateTime.Now);
+                var currentDateTime = GetCurrentDate();
+                _logger.LogInformation("Lead Research Agent - starting execution at {Time} ({TimeZone})", 
+                    currentDateTime, 
+                    _timeZone.DisplayName);
 
                 var userId = Environment.GetEnvironmentVariable("MICROSOFT_GRAPH_USER_ID") ?? "me";
                 var outlookService = new OutlookEmailService(_graphClient, userId, _loggerFactory.CreateLogger<OutlookEmailService>());
@@ -77,7 +160,9 @@ namespace LeadResearchAgent
                     await outlookService.MarkEmailAsProcessedAsync(firstEmail.Id);
                 }
 
-                _logger.LogInformation("Processing completed successfully at {Time}", DateTime.Now);
+                _logger.LogInformation("Processing completed successfully at {Time} ({TimeZone})", 
+                    GetCurrentDate(), 
+                    _timeZone.DisplayName);
             }
             catch (Exception ex)
             {
@@ -127,9 +212,65 @@ namespace LeadResearchAgent
             }
         }
 
+        private TimeZoneInfo ParseTimeZone()
+        {
+            var timeZoneId = Environment.GetEnvironmentVariable("WORKER_TIMEZONE");
+
+            if (string.IsNullOrEmpty(timeZoneId))
+            {
+                _logger.LogInformation("WORKER_TIMEZONE not configured. Using UTC timezone.");
+                return TimeZoneInfo.Utc;
+            }
+
+            try
+            {
+                var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+                _logger.LogInformation("Timezone configured: {TimeZone} (UTC{Offset})", 
+                    timeZone.DisplayName, 
+                    timeZone.BaseUtcOffset.ToString(@"hh\:mm"));
+                return timeZone;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse WORKER_TIMEZONE: '{Value}'. Using UTC timezone.", timeZoneId);
+                return TimeZoneInfo.Utc;
+            }
+        }
+
+        private TimeSpan? ParseExecutionTime()
+        {
+            var timeStr = Environment.GetEnvironmentVariable("WORKER_EXECUTION_TIME");
+
+            if (string.IsNullOrEmpty(timeStr))
+            {
+                return null;
+            }
+
+            try
+            {
+                if (TimeSpan.TryParseExact(timeStr, @"hh\:mm", null, out var time))
+                {
+                    if (time.Hours >= 0 && time.Hours < 24)
+                    {
+                        _logger.LogInformation("Execution time configured: {Time} ({TimeZone})", 
+                            time.ToString(@"hh\:mm"), 
+                            _timeZone.DisplayName);
+                        return time;
+                    }
+                }
+
+                _logger.LogError("Failed to parse WORKER_EXECUTION_TIME: '{Value}'. Format should be 'HH:mm' (e.g., '14:30').", timeStr);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse WORKER_EXECUTION_TIME.");
+                return null;
+            }
+        }
+
         private TimeSpan? ParseExecutionInterval()
         {
-            // Format: "60" (minutes) or "01:00:00" (hours:minutes:seconds)
             var intervalStr = Environment.GetEnvironmentVariable("WORKER_EXECUTION_INTERVAL");
 
             if (string.IsNullOrEmpty(intervalStr))
