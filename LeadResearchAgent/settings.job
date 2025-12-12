@@ -1,0 +1,5 @@
+{
+  "is_continuous": true,
+  "is_singleton": true,
+  "stopping_wait_time": 300
+}

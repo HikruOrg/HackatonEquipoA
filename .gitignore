@@ -217,3 +217,5 @@ ModelManifest.xml
 
 # Results files
 Data/results_*.json
+/LeadResearchAgent/Properties/launchSettings.json
+/LeadResearchAgent/Properties/launchSettings.json

@@ -1,6 +1,7 @@
+﻿using LeadResearchAgent.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
-using Microsoft.Extensions.Logging;
 
 namespace LeadResearchAgent.Services
 {
@@ -8,109 +9,62 @@ namespace LeadResearchAgent.Services
     {
         private readonly GraphServiceClient _graphServiceClient;
         private readonly ILogger<OutlookEmailService>? _logger;
+        private readonly string _userId;
 
-        public OutlookEmailService(GraphServiceClient graphServiceClient, ILogger<OutlookEmailService>? logger = null)
+        public OutlookEmailService(GraphServiceClient graphServiceClient, string userId = "me", ILogger<OutlookEmailService>? logger = null)
         {
             _graphServiceClient = graphServiceClient;
+            _userId = userId;
             _logger = logger;
         }
 
         /// <summary>
-        /// Retrieves LinkSV Pulse newsletters from Outlook inbox
+        /// Retrieves unread LinkSV Pulse newsletters from Outlook inbox
         /// </summary>
-        public async Task<List<string>> GetLinkSVPulseEmailsAsync(int maxEmails = 10)
+        public async Task<List<EmailMessage>> GetLinkSVPulseEmailsAsync(int maxEmails = 10)
         {
             try
             {
-                _logger?.LogInformation("Fetching LinkSV Pulse emails from Outlook...");
+                _logger?.LogInformation("Fetching unread LinkSV Pulse emails from Outlook...");
 
-                // Search for emails from LinkSV Pulse
-                var messages = await _graphServiceClient.Me.Messages
+                // Search for unread emails from LinkSV Pulse
+                var messages = await _graphServiceClient.Users[_userId].Messages
                     .GetAsync(requestConfiguration =>
                     {
-                        requestConfiguration.QueryParameters.Filter = 
-                            "contains(from/emailAddress/address,'linksv') or " +
-                            "contains(subject,'LinkSV') or " +
-                            "contains(subject,'Pulse') or " +
-                            "contains(from/emailAddress/name,'LinkSV')";
+                        requestConfiguration.QueryParameters.Filter = "isRead eq false and startsWith(subject, 'Fw: Pulse of the Valley Premium')";
                         requestConfiguration.QueryParameters.Top = maxEmails;
-                        requestConfiguration.QueryParameters.Orderby = new[] { "receivedDateTime desc" };
-                        requestConfiguration.QueryParameters.Select = new[] { "subject", "body", "from", "receivedDateTime" };
+                        //requestConfiguration.QueryParameters.Orderby = new[] { "receivedDateTime desc" };
+                        //requestConfiguration.QueryParameters.Select = new[] { "subject", "body", "from", "receivedDateTime", "isRead" };
                     });
 
-                var emailContents = new List<string>();
+                var emailMessages = new List<EmailMessage>();
 
                 if (messages?.Value != null)
                 {
                     foreach (var message in messages.Value)
                     {
-                        if (message.Body?.Content != null)
+                        if (message.Body?.Content != null && message.Id != null)
                         {
-                            var emailContent = ExtractTextFromHtml(message.Body.Content);
-                            emailContents.Add(emailContent);
+                            //var emailContent = ExtractTextFromHtml(message.Body.Content);
+                            var emailContent = message.Body.Content;
+                            emailMessages.Add(new EmailMessage
+                            {
+                                Id = message.Id,
+                                Content = emailContent
+                            });
                             
-                            _logger?.LogInformation($"Retrieved email: {message.Subject} from {message.From?.EmailAddress?.Address}");
+                            _logger?.LogInformation($"Retrieved unread email: {message.Subject} from {message.From?.EmailAddress?.Address}");
                         }
                     }
                 }
 
-                _logger?.LogInformation($"Successfully retrieved {emailContents.Count} LinkSV Pulse emails");
-                return emailContents;
+                _logger?.LogInformation($"Successfully retrieved {emailMessages.Count} unread LinkSV Pulse emails");
+                return emailMessages;
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Failed to retrieve emails from Outlook");
                 throw new InvalidOperationException($"Failed to retrieve emails: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// Searches for unread newsletter emails in the last 7 days
-        /// </summary>
-        public async Task<List<NewsletterEmail>> GetRecentNewslettersAsync(int days = 7)
-        {
-            try
-            {
-                var sinceDate = DateTime.UtcNow.AddDays(-days).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                
-                var messages = await _graphServiceClient.Me.Messages
-                    .GetAsync(requestConfiguration =>
-                    {
-                        requestConfiguration.QueryParameters.Filter = 
-                            $"receivedDateTime ge {sinceDate} and " +
-                            "(contains(subject,'newsletter') or " +
-                            "contains(subject,'funding') or " +
-                            "contains(subject,'startups') or " +
-                            "contains(subject,'venture') or " +
-                            "contains(subject,'investment') or " +
-                            "contains(from/emailAddress/address,'linksv'))";
-                        requestConfiguration.QueryParameters.Top = 50;
-                        requestConfiguration.QueryParameters.Orderby = new[] { "receivedDateTime desc" };
-                    });
-
-                var newsletters = new List<NewsletterEmail>();
-
-                if (messages?.Value != null)
-                {
-                    foreach (var message in messages.Value)
-                    {
-                        newsletters.Add(new NewsletterEmail
-                        {
-                            Subject = message.Subject ?? "",
-                            Content = ExtractTextFromHtml(message.Body?.Content ?? ""),
-                            Sender = message.From?.EmailAddress?.Address ?? "",
-                            ReceivedDate = message.ReceivedDateTime?.DateTime ?? DateTime.Now,
-                            MessageId = message.Id ?? ""
-                        });
-                    }
-                }
-
-                return newsletters;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Failed to retrieve recent newsletters");
-                throw;
             }
         }
 
@@ -126,7 +80,7 @@ namespace LeadResearchAgent.Services
                     IsRead = true
                 };
 
-                await _graphServiceClient.Me.Messages[messageId]
+                await _graphServiceClient.Users[_userId].Messages[messageId]
                     .PatchAsync(message);
 
                 _logger?.LogInformation($"Marked email {messageId} as read");
@@ -138,27 +92,115 @@ namespace LeadResearchAgent.Services
         }
 
         /// <summary>
-        /// Creates a folder for processed newsletters (optional organization)
+        /// Sends the analysis results by email
         /// </summary>
-        public async Task<string> CreateProcessedFolderAsync()
+        public async Task SendResultsEmailAsync(string recipientEmail, List<FoundryCompanyResult> results, CancellationToken cancellationToken = default)
         {
             try
             {
-                var folder = new MailFolder
+                _logger?.LogInformation("Preparing results email for {Email}", recipientEmail);
+
+                var htmlContent = BuildResultsHtmlContent(results);
+
+                var message = new Message
                 {
-                    DisplayName = "Processed Newsletters - Hikru"
+                    Subject = "Resultados Lead Research Agent",
+                    Body = new ItemBody
+                    {
+                        ContentType = BodyType.Html,
+                        Content = htmlContent
+                    },
+                    ToRecipients = new List<Recipient>
+                    {
+                        new Recipient
+                        {
+                            EmailAddress = new EmailAddress
+                            {
+                                Address = recipientEmail
+                            }
+                        }
+                    }
                 };
 
-                var createdFolder = await _graphServiceClient.Me.MailFolders
-                    .PostAsync(folder);
+                await _graphServiceClient.Users[_userId].SendMail.PostAsync(
+                    new Microsoft.Graph.Users.Item.SendMail.SendMailPostRequestBody
+                    {
+                        Message = message,
+                        SaveToSentItems = true
+                    }, 
+                    cancellationToken: cancellationToken);
 
-                return createdFolder?.Id ?? "";
+                _logger?.LogInformation("✅ Results email sent successfully to {Email}", recipientEmail);
             }
             catch (Exception ex)
             {
-                _logger?.LogWarning(ex, "Failed to create processed folder");
-                return "";
+                _logger?.LogError(ex, "Error sending results email: {Message}", ex.Message);
+                throw;
             }
+        }
+
+        private string BuildResultsHtmlContent(List<FoundryCompanyResult> results)
+        {
+            // Separate accepted and rejected results
+            var aceptadas = results
+                .Where(r => r.NivelInteres != null &&
+                            (r.NivelInteres.Equals("alto", StringComparison.OrdinalIgnoreCase) ||
+                             r.NivelInteres.Equals("medio", StringComparison.OrdinalIgnoreCase) ||
+                             r.NivelInteres.Equals("bajo", StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            var descartadas = results
+                .Where(r => r.NivelInteres != null &&
+                            r.NivelInteres.Equals("descartar", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var htmlBuilder = new System.Text.StringBuilder();
+            htmlBuilder.AppendLine("<h2>Resultados Lead Research Agent</h2>");
+
+            // Accepted section
+            htmlBuilder.AppendLine("<h3>Aceptadas</h3>");
+            htmlBuilder.AppendLine("<ul>");
+            foreach (var r in aceptadas)
+            {
+                htmlBuilder.AppendLine("<li>");
+                var companyName = r.Empresa?.Nombre ?? "N/A";
+                if (!string.IsNullOrEmpty(r.EmpresaUrl))
+                {
+                    htmlBuilder.AppendLine($"<strong><a href=\"{r.EmpresaUrl}\" target=\"_blank\">{companyName}</a></strong> ({r.Empresa?.Sector}, {r.Empresa?.Pais})<br>");
+                }
+                else
+                {
+                    htmlBuilder.AppendLine($"<strong>{companyName}</strong> ({r.Empresa?.Sector}, {r.Empresa?.Pais})<br>");
+                }
+                htmlBuilder.AppendLine($"<b>Capital:</b> {r.TotalCapital}M <br>");
+                htmlBuilder.AppendLine($"<b>Interés:</b> {r.NivelInteres}<br>");
+                htmlBuilder.AppendLine($"<b>Resumen:</b> {r.Resumen}<br>");
+                htmlBuilder.AppendLine($"<b>Razón de match:</b> {r.RazonDeMatch}<br>");
+                htmlBuilder.AppendLine("</li>");
+                htmlBuilder.AppendLine("</br>");
+            }
+            htmlBuilder.AppendLine("</ul>");
+
+            if (descartadas.Any())
+            {
+                // Rejected section
+                htmlBuilder.AppendLine("<h3>Descartadas</h3>");
+                htmlBuilder.AppendLine("<ul>");
+                foreach (var r in descartadas)
+                {
+                    htmlBuilder.AppendLine("<li>");
+                    htmlBuilder.AppendLine($"<strong>{r.Empresa?.Nombre}</strong> ({r.Empresa?.Sector}, {r.Empresa?.Pais})<br>");
+                    htmlBuilder.AppendLine($"<b>Capital:</b> {r.TotalCapital}M <br>");
+                    htmlBuilder.AppendLine($"<b>Interés:</b> {r.NivelInteres}<br>");
+                    htmlBuilder.AppendLine($"<b>Resumen:</b> {r.Resumen}<br>");
+                    htmlBuilder.AppendLine($"<b>Razón de descarte:</b> {r.RazonDeMatch}<br>");
+                    htmlBuilder.AppendLine("</li>");
+                    htmlBuilder.AppendLine("</br>");
+                }
+                htmlBuilder.AppendLine("</ul>");
+            }
+
+            return htmlBuilder.ToString();
         }
 
         private string ExtractTextFromHtml(string htmlContent)
@@ -193,14 +235,5 @@ namespace LeadResearchAgent.Services
             
             return text.Trim();
         }
-    }
-
-    public class NewsletterEmail
-    {
-        public string Subject { get; set; } = "";
-        public string Content { get; set; } = "";
-        public string Sender { get; set; } = "";
-        public DateTime ReceivedDate { get; set; }
-        public string MessageId { get; set; } = "";
     }
 }
