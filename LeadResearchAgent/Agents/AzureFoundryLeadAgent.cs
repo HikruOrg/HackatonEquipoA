@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Azure.AI.Agents.Persistent;
+using Azure.Core;
 using Azure.Identity;
 using LeadResearchAgent.Models;
 
@@ -28,13 +29,19 @@ namespace LeadResearchAgent.Agents
         {
             _endpoint = endpoint ?? Environment.GetEnvironmentVariable("AZURE_FOUNDRY_ENDPOINT") ?? throw new InvalidOperationException("Endpoint required");
             _assistantId = assistantId ?? Environment.GetEnvironmentVariable("AZURE_FOUNDRY_AGENT_ID") ?? throw new InvalidOperationException("Agent id required");
-            var key = apiKey ?? Environment.GetEnvironmentVariable("AZURE_FOUNDRY_API_KEY") ?? throw new InvalidOperationException("API key required");
 
             _http = httpClient ?? new HttpClient();
             if (timeout.HasValue) _http.Timeout = timeout.Value;
 
+
+            // Use ChainedTokenCredential to try Managed Identity first, then Environment variables
+            var credential = new ChainedTokenCredential(
+                new ManagedIdentityCredential(),    // For Azure App Service
+                new EnvironmentCredential()         // For local dev with Service Principal
+            );
+
             // Use AzureKeyCredential for API key auth and Uri for endpoint
-            _persistentClient = new PersistentAgentsClient(_endpoint, new AzureCliCredential());
+            _persistentClient = new PersistentAgentsClient(_endpoint, credential);
         }
 
         /// <summary>

@@ -202,38 +202,5 @@ namespace LeadResearchAgent.Services
 
             return htmlBuilder.ToString();
         }
-
-        private string ExtractTextFromHtml(string htmlContent)
-        {
-            if (string.IsNullOrEmpty(htmlContent))
-                return "";
-
-            // Simple HTML to text conversion
-            // For production, consider using HtmlAgilityPack for better parsing
-            var text = htmlContent
-                .Replace("<br>", "\n")
-                .Replace("<br/>", "\n")
-                .Replace("<br />", "\n")
-                .Replace("</p>", "\n")
-                .Replace("</div>", "\n")
-                .Replace("</h1>", "\n")
-                .Replace("</h2>", "\n")
-                .Replace("</h3>", "\n")
-                .Replace("</h4>", "\n")
-                .Replace("</h5>", "\n")
-                .Replace("</h6>", "\n");
-
-            // Remove HTML tags
-            text = System.Text.RegularExpressions.Regex.Replace(text, "<.*?>", "");
-            
-            // Decode HTML entities
-            text = System.Net.WebUtility.HtmlDecode(text);
-            
-            // Clean up whitespace
-            text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ");
-            text = System.Text.RegularExpressions.Regex.Replace(text, @"\n\s*\n", "\n\n");
-            
-            return text.Trim();
-        }
     }
 }

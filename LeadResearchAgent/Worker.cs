@@ -178,9 +178,33 @@ namespace LeadResearchAgent
                 return;
             }
 
+            var recipientEmails = Environment.GetEnvironmentVariable("RECIPIENT_EMAILS");
+
+            if (string.IsNullOrEmpty(recipientEmails))
+            {
+                _logger.LogError("RECIPIENT_EMAILS environment variable is not configured. Cannot send results email.");
+                return;
+            }
+
             var results = await _foundryAgent.ProcessNewsletterAsync(email, cancellationToken: cancellationToken);
 
-            await outlookService.SendResultsEmailAsync("daniel.ramirez@hikrutech.com", results, cancellationToken);
+            // Split by semicolon or comma to support multiple recipients
+            var recipients = recipientEmails.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(e => e.Trim())
+                .Where(e => !string.IsNullOrEmpty(e))
+                .ToList();
+
+            if (!recipients.Any())
+            {
+                _logger.LogError("No valid recipient emails found in RECIPIENT_EMAILS environment variable.");
+                return;
+            }
+
+            foreach (var recipient in recipients)
+            {
+                await outlookService.SendResultsEmailAsync(recipient, results, cancellationToken);
+                _logger.LogInformation("Results email sent to: {Recipient}", recipient);
+            }
         }
 
         private async Task<List<EmailMessage>> LoadOutlookEmailsAsync(OutlookEmailService outlookService, CancellationToken cancellationToken)
